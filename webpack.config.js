@@ -8,7 +8,8 @@ module.exports = {
     contentBase: path.join(__dirname, "dist"),
     compress: true,
     port: 9000,
-    hot: false // hate it
+    hot: false,
+    inline: false
   },
   entry: "./src/index.tsx",
   module: {
