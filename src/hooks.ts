@@ -22,6 +22,7 @@ export function useCheckboxState(): [
 
 export function useDatabase(
   genreFilter: Array<string>,
+  actorFilter: Array<string>,
   yearStart: number,
   yearEnd: number,
   limit: number
@@ -78,19 +79,23 @@ export function useDatabase(
         genreFilter.length > 0
           ? item.genres.some(genre => genreFilter.includes(genre))
           : true;
+      const fitsByActor =
+        actorFilter.length > 0
+          ? item.cast.some(actor => actorFilter.includes(actor))
+          : true;
       const fitsByYear =
         yearStart <= yearEnd
           ? item.year >= yearStart && item.year <= yearEnd
           : true;
 
-      if (fitsByGenre && fitsByYear) {
+      if (fitsByGenre && fitsByYear && fitsByActor) {
         filtered.push(item);
       }
     }
     const movies = filtered.slice(0, limit);
 
     return [filtered, movies];
-  }, [db, genreFilter, yearStart, yearEnd, limit]);
+  }, [db, genreFilter, actorFilter, yearStart, yearEnd, limit]);
 
   return { filtered, movies, genresIndex, actorsIndex };
 }

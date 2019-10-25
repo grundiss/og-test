@@ -12,7 +12,7 @@ export const GlobalStyle = createGlobalStyle`
 
 export const Layout = styled.div`
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 300px 1fr;
   grid-column-gap: 16px;
   width: 100%;
 `;
@@ -32,10 +32,10 @@ export const TableRow = styled.tr`
 `;
 
 export const HeaderM = styled.h3`
-  font-weight:bold;
-  font-size:1.6em;
+  font-weight: bold;
+  font-size: 1.6em;
   margin-bottom: 2em;
-`
+`;
 
 export const HeaderS = styled.h4`
   font-weight: bold;

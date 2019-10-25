@@ -13,10 +13,147 @@ import {
   LoadMore
 } from "./ui";
 import { useCheckboxState, useDatabase } from "./hooks";
+import { ActorsIndex } from "./app";
+
+function Filters({
+  actorsIndex,
+  genresIndex,
+  yearStart,
+  yearEnd,
+  genreFilter,
+  actorFilter,
+  setActorFilter,
+  setYearStart,
+  setYearEnd,
+  setGenreFilter
+}: {
+  actorsIndex: ActorsIndex;
+  genresIndex: Array<string>;
+  yearStart: number;
+  yearEnd: number;
+  genreFilter: Array<string>;
+  actorFilter: Array<string>;
+  setActorFilter: (
+    x: string
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setGenreFilter: (
+    x: string
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setYearStart: (x: number) => void;
+  setYearEnd: (x: number) => void;
+}) {
+  const [shouldCutActorsList, setShouldCutActorsList] = React.useState(true);
+  const actorsList = React.useMemo(() => {
+    const list = Object.entries(actorsIndex).sort(
+      ([_name1, { movies: aMovies }], [_name2, { movies: bMovies }]) =>
+        bMovies.length > aMovies.length ? 1 : -1
+    );
+
+    if (shouldCutActorsList) {
+      return list.slice(0, 30);
+    } else {
+      return list;
+    }
+  }, [shouldCutActorsList, actorsIndex]);
+
+  return (
+    <FilterPanel>
+      <div>
+        <HeaderS>Year</HeaderS>
+        <div>
+          <input
+            type="number"
+            value={yearStart}
+            onChange={({ target: { value } }) => {
+              setYearStart(parseInt(value, 10));
+            }}
+          />{" "}
+          —{" "}
+          <input
+            type="number"
+            value={yearEnd}
+            onChange={({ target: { value } }) => {
+              setYearEnd(parseInt(value, 10));
+            }}
+          />
+        </div>
+      </div>
+      <div>
+        <HeaderS>Genres</HeaderS>
+        {genresIndex.map(genre => (
+          <div key={genre as string}>
+            <label>
+              <input
+                type="checkbox"
+                onChange={setGenreFilter(genre)}
+                checked={genreFilter.includes(genre)}
+              />{" "}
+              {genre}
+            </label>
+          </div>
+        ))}
+      </div>
+      <div>
+        <HeaderS>Actors</HeaderS>
+        {actorsList.map(([name, { movies }]) => (
+          <div key={name}>
+            <label>
+              <input
+                type="checkbox"
+                onChange={setActorFilter(name)}
+                checked={actorFilter.includes(name)}
+              />{" "}
+              {name} ({movies.length})
+            </label>
+          </div>
+        ))}
+        {shouldCutActorsList && (
+          <LoadMore
+            onClick={() => {
+              setShouldCutActorsList(false);
+            }}
+          >
+            Load more actors
+          </LoadMore>
+        )}
+      </div>
+    </FilterPanel>
+  );
+}
+
+function ActorDetails({
+  onClose,
+  actor,
+  actorsIndex
+}: {
+  onClose: () => void;
+  actor: string;
+  actorsIndex: ActorsIndex;
+}) {
+  const costars = React.useMemo(
+    () =>
+      Object.entries(actorsIndex[actor].costars).sort(
+        ([_name1, countA], [_name2, countB]) => countB - countA
+      ),
+    [actor, actorsIndex]
+  );
+  const movies = actorsIndex[actor].movies;
+
+  return (
+    <ReactModal isOpen onRequestClose={onClose}>
+      <HeaderM>{actor}</HeaderM>
+      <HeaderS>Movies ({movies.length})</HeaderS>
+      {movies.map(({ title }) => title).join(", ")}
+      <HeaderS>Costars</HeaderS>
+      {costars.map(([name, count]) => `${name} (${count} movies)`).join(", ")}
+    </ReactModal>
+  );
+}
 
 function App() {
   const [limit, setLimit] = React.useState(50);
   const [genreFilter, setGenreFilter] = useCheckboxState();
+  const [actorFilter, setActorFilter] = useCheckboxState();
   const [yearStart, setYearStart] = React.useState(1800);
   const [yearEnd, setYearEnd] = React.useState(2030);
   const [
@@ -25,6 +162,7 @@ function App() {
   ] = React.useState(null);
   const { genresIndex, actorsIndex, filtered, movies } = useDatabase(
     genreFilter,
+    actorFilter,
     yearStart,
     yearEnd,
     limit
@@ -34,43 +172,18 @@ function App() {
     <div>
       <GlobalStyle />
       <Layout>
-        <FilterPanel>
-          <div>
-            <HeaderS>Year</HeaderS>
-            <div>
-              <input
-                type="number"
-                value={yearStart}
-                onChange={({ target: { value } }) => {
-                  setYearStart(parseInt(value, 10));
-                }}
-              />{" "}
-              —{" "}
-              <input
-                type="number"
-                value={yearEnd}
-                onChange={({ target: { value } }) => {
-                  setYearEnd(parseInt(value, 10));
-                }}
-              />
-            </div>
-          </div>
-          <div>
-            <HeaderS>Genres</HeaderS>
-            {genresIndex.map(genre => (
-              <div>
-                <label>
-                  <input
-                    type="checkbox"
-                    onChange={setGenreFilter(genre)}
-                    checked={genreFilter.includes(genre)}
-                  />{" "}
-                  {genre}
-                </label>
-              </div>
-            ))}
-          </div>
-        </FilterPanel>
+        <Filters
+          actorsIndex={actorsIndex}
+          genresIndex={genresIndex as Array<string>}
+          yearStart={yearStart}
+          yearEnd={yearEnd}
+          genreFilter={genreFilter}
+          actorFilter={actorFilter}
+          setActorFilter={setActorFilter}
+          setYearStart={setYearStart}
+          setYearEnd={setYearEnd}
+          setGenreFilter={setGenreFilter}
+        />
         <div>
           <Table>
             <thead>
@@ -124,25 +237,18 @@ function App() {
         </div>
       </Layout>
       {detailedInfoRequiredForActor !== null && (
-        <ReactModal
-          isOpen
-          onRequestClose={() => {
+        <ActorDetails
+          onClose={() => {
             setDetailedInfoRequiredForActor(null);
           }}
-        >
-          <HeaderM>{detailedInfoRequiredForActor}</HeaderM>
-          <HeaderS>Movies</HeaderS>
-          {actorsIndex[detailedInfoRequiredForActor].movies
-            .map(({ title }) => title)
-            .join(", ")}
-          <HeaderS>Costars</HeaderS>
-          {Object.entries(actorsIndex[detailedInfoRequiredForActor].costars)
-            .map(([name, count]) => `${name} (${count} movies)`)
-            .join(", ")}
-        </ReactModal>
+          actor={detailedInfoRequiredForActor}
+          actorsIndex={actorsIndex}
+        />
       )}
     </div>
   );
 }
 
-ReactDOM.render(<App />, document.getElementById("app"));
+const appElement = document.getElementById("app");
+ReactModal.setAppElement(appElement);
+ReactDOM.render(<App />, appElement);
